@@ -327,6 +327,27 @@ _NET_ENV_SPECS: dict[str, NetEnvSpec] = {
         topo_size="m",
         deploy_defaults={"topo": "geant", "scenario_id": "isp_geant_ebgp_rpki"},
     ),
+    # Prototype: IPFIX flow monitoring, kept out of the benchmark pool.
+    "isp_abilene_netflow": NetEnvSpec(
+        lab_name="isp_abilene_netflow",
+        module="nika.net_env.isp_netflow.lab",
+        class_name="IspAbileneNetflow",
+        family="isp",
+        benchmark_excluded=True,
+        tags=(
+            "isp",
+            "sndlib",
+            "frr",
+            "isis",
+            "igp",
+            "link",
+            "icmp",
+            "netflow",
+        ),
+        supported_backends=("kathara",),
+        topo_size="s",
+        deploy_defaults={"topo": "abilene", "scenario_id": "isp_abilene_netflow"},
+    ),
     "min3clos": NetEnvSpec(
         lab_name="min3clos",
         module="nika.net_env.min3clos.lab",

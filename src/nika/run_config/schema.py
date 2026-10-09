@@ -122,6 +122,8 @@ class McpSettings(BaseModel):
     # Observation budget for MCP tool text (mini-swe-agent head/tail style).
     # Over budget: keep first/last halves and elide the middle. 0 disables.
     tool_output_max_chars: int = 10000
+    # Diagnosis MCP servers left out of every session (tool ablations).
+    disabled_servers: list[str] = Field(default_factory=list)
 
     @field_validator("gateway_port")
     @classmethod

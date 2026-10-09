@@ -20,6 +20,7 @@ ROUTEROS_KEYWORDS = frozenset({"mikrotik", "routeros"})
 SWITCH_KEYWORDS = frozenset({"p4", "bmv2", "bloom", "mpls", "int", "counter"})
 SDN_KEYWORDS = frozenset({"sdn"})
 TELEMETRY_KEYWORDS = frozenset({"telemetry"})
+NETFLOW_KEYWORDS = frozenset({"netflow", "ipfix"})
 KUBERNETES_KEYWORDS = frozenset({"kubernetes", "k3s", "k8s"})
 
 
@@ -99,6 +100,12 @@ MCP_SERVER_SPECS: dict[str, MCPServerSpec] = {
         role="telemetry",
         module="nika.mcp.servers.kathara.telemetry_server",
     ),
+    "kathara_netflow_mcp_server": MCPServerSpec(
+        name="kathara_netflow_mcp_server",
+        backend="kathara",
+        role="telemetry",
+        module="nika.mcp.servers.kathara.netflow_server",
+    ),
     # Host-side Kubernetes MCP (session kubeconfig → published API port)
     "k8s_mcp_server": MCPServerSpec(
         name="k8s_mcp_server",
@@ -172,6 +179,16 @@ def _k8s_mcp_enabled() -> bool:
     return access != "kubectl_only"
 
 
+def _disabled_mcp_servers() -> frozenset[str]:
+    """Return diagnosis servers the run config leaves out (tool ablations)."""
+    try:
+        from nika.run_config.loader import get_run_config
+
+        return frozenset(get_run_config().nika.mcp.disabled_servers)
+    except Exception:  # noqa: BLE001 - config may be unavailable in sandbox
+        return frozenset()
+
+
 def select_diagnosis_servers(
     scenario_name: str,
     *,
@@ -201,7 +218,10 @@ def select_diagnosis_servers(
         servers.append("kathara_sdn_mcp_server")
     if tokens & TELEMETRY_KEYWORDS:
         servers.append("kathara_telemetry_mcp_server")
+    if backend != "containerlab" and tokens & NETFLOW_KEYWORDS:
+        servers.append("kathara_netflow_mcp_server")
     if tokens & KUBERNETES_KEYWORDS and _k8s_mcp_enabled():
         servers.append(K8S_MCP_SERVER)
 
-    return servers
+    disabled = _disabled_mcp_servers()
+    return [server for server in servers if server not in disabled]

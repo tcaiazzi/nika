@@ -104,6 +104,9 @@ nika:
     # Cap MCP tool text returned to the agent. Over this size, keep the first
     # and last halves and elide the middle (mini-swe-agent style). 0 disables.
     tool_output_max_chars: 10000
+    # Leave these diagnosis MCP servers out of every session (tool ablations),
+    # e.g. [kathara_netflow_mcp_server].
+    disabled_servers: []
   static_validation:
     # Run supported topology checks with Batfish before deployment.
     enabled: false

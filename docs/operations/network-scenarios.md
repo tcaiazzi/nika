@@ -50,6 +50,7 @@ Why heavy labs need a separate cap:
 | `isp_<topology>` | Kathara or Containerlab | Fixed metadata `s`/`m`/`l` | Protocol options | One SNDlib graph per scenario ID, compiled to FRR or SR Linux |
 | `isp_abilene_ebgp_rpki` / `isp_geant_ebgp_rpki` | Kathara | Fixed | — | Named eBGP + offline RPKI overlays |
 | `isp_abilene_ebgp_rtbh` / `isp_dfn-bwin_ebgp_rtbh` | Kathara | Fixed | — | Named eBGP + RTBH blackhole overlays |
+| `isp_abilene_netflow` | Kathara | Fixed | — | Prototype: IS-IS + IPFIX flow export; outside the benchmark pool |
 | `min3clos` | Containerlab | Fixed |  | Five-node SR Linux eBGP Clos |
 | `k8s_lab` | Kathara | Fixed |  | FRR fat-tree with a six-node k3s cluster |
 | `llmd_lab` | Kathara | Fixed |  | L2 k3s cluster with simulated llm-d inference |
@@ -386,12 +387,16 @@ Complex overlays are fixed scenario IDs (Kathara/FRR only):
 | `isp_geant_ebgp_rpki` | GEANT | OSPF + eBGP + offline RPKI/ROV |
 | `isp_abilene_ebgp_rtbh` | Abilene | OSPF + eBGP + RTBH blackhole |
 | `isp_dfn-bwin_ebgp_rtbh` | DFN-BWIN | OSPF + eBGP + RTBH blackhole |
+| `isp_abilene_netflow` | Abilene | IS-IS + IPFIX flow export (prototype, not benchmarked) |
 
 ```shell
 uv run nika env run isp_abilene_ebgp_rpki
 uv run nika env run isp_abilene_ebgp_rtbh
 uv run nika env run isp_dfn-bwin_ebgp_rtbh
+uv run nika env run isp_abilene_netflow
 ```
+
+`isp_abilene_netflow` adds IPFIX flow monitoring. Each router runs a pmacct `nfprobe` that exports the flows it receives on every backbone and edge interface. Records go over the out-of-band `flow_export` LAN, which the IGP does not advertise, to `flow_collector`, where `nfcapd` stores them in `/var/lib/nika/flows`. After deploy, the edge stubs carry the SNDlib demand matrix at 1% scale as long-running UDP iperf3 flows. The deploy waits until every router has exported flows, so a pre-fault baseline exists before any injection. Agents query the records with [`netflow_query`](../agents/mcp-servers.md#netflow-kathara_netflow_mcp_server).
 
 NIKA ranks the 26 vendored SNDlib graphs by node count, breaks ties by topology name, and divides the ordered catalog into fixed tiers of 8, 9, and 9 graphs for sampling metadata. Representative graphs: `isp_abilene` (`s`, 12 nodes), `isp_france` (`m`, 25 nodes), `isp_pioro40` (`l`, 40 nodes).
 
