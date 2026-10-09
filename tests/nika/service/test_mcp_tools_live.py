@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 
 import pytest
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -293,5 +294,72 @@ class TestTelemetryMcpLive(IntegrationTestCase):
             assert any(
                 row.get("trace_complete") and row.get("hop_sequence") for row in traces
             )
+        finally:
+            self._close_session(session_id)
+
+
+def _flow_rows(raw: object) -> list[dict]:
+    rows: list[dict] = []
+    for text in tool_text_list(raw):
+        _assert_ok("netflow_query", text)
+        rows.append(json.loads(text))
+    return rows
+
+
+@pytest.mark.skipif(not docker_available(), reason="Docker not available")
+class TestNetflowMcpLive(IntegrationTestCase):
+    """isp_abilene_netflow: IPFIX records show the baseline path and a reroute."""
+
+    SCENARIO = "isp_abilene_netflow"
+    # pc_chinng -> pc_iplsng crosses the direct chinng-iplsng link (chinng eth0).
+    FLOW_FILTER = "src ip 10.254.0.10 and dst ip 10.254.0.22"
+
+    def test_netflow_query_shows_reroute_after_link_down(self) -> None:
+        session_id = self._start_env(self.SCENARIO)
+        try:
+            self._assert_session_ready(session_id, self.SCENARIO)
+            with mcp_gateway_for_session(session_id, scenario_name=self.SCENARIO):
+                config = MCPServerConfig(session_id=session_id).load_http_config(
+                    ["kathara_netflow_mcp_server"]
+                )
+
+                async def _query(**args) -> list[dict]:
+                    client = MultiServerMCPClient(connections=config)
+                    tools = {t.name: t for t in await client.get_tools()}
+                    return _flow_rows(await tools["netflow_query"].ainvoke(args))
+
+                exporters = asyncio.run(
+                    _query(start_time="-300", aggregate_by=["router"], limit=100)
+                )
+                assert len({row["exporter"] for row in exporters}) == 12
+
+                before = asyncio.run(
+                    _query(
+                        start_time="-120",
+                        filter=self.FLOW_FILTER,
+                        aggregate_by=["router"],
+                    )
+                )
+                assert {row["exporter"] for row in before} == {"chinng", "iplsng"}
+
+                self._inject_failure(
+                    "link_down",
+                    {"host_name": "chinng", "intf_name": "eth0"},
+                    session_id=session_id,
+                )
+                window_start = str(time.time() + 20)
+                after: set[str] = set()
+                deadline = time.monotonic() + 180
+                while "nycmng" not in after and time.monotonic() < deadline:
+                    time.sleep(10)
+                    rows = asyncio.run(
+                        _query(
+                            start_time=window_start,
+                            filter=self.FLOW_FILTER,
+                            aggregate_by=["router"],
+                        )
+                    )
+                    after = {row["exporter"] for row in rows}
+            assert {"chinng", "nycmng", "iplsng"} <= after
         finally:
             self._close_session(session_id)

@@ -10,6 +10,7 @@ ISP_NAMED_SPECIALS: frozenset[str] = frozenset(
         "isp_dfn-bwin_ebgp_rtbh",
         "isp_abilene_ebgp_rpki",
         "isp_geant_ebgp_rpki",
+        "isp_abilene_netflow",
     }
 )
 _ISP_PREFIX = "isp_"
@@ -60,6 +61,8 @@ def isp_topo_from_scenario(scenario: str) -> str:
         return "abilene"
     if scenario == "isp_geant_ebgp_rpki":
         return "geant"
+    if scenario == "isp_abilene_netflow":
+        return "abilene"
     if is_isp_base_topology(scenario):
         return scenario[len(_ISP_PREFIX) :]
     raise ValueError(f"Not an ISP scenario: {scenario!r}")

@@ -32,6 +32,7 @@ Use `exec_shell(host_name, command, timeout=10)` for ordinary commands. Set `tim
 | `kathara_bmv2_mcp_server` | Kathara P4 scenarios | `p4rt_exec` queries P4Runtime through `fabric_mgr` and removes private fault fields from JSON output. |
 | `kathara_sdn_mcp_server` | Kathara SDN scenarios | `sdn_onos_rest` queries ONOS REST through `fabric_mgr`. |
 | `kathara_telemetry_mcp_server` | Kathara telemetry scenarios | `int_query_telemetry` filters observed INT-MX packet and hop records. |
+| `kathara_netflow_mcp_server` | Kathara scenarios named or tagged `netflow` / `ipfix` | `netflow_query` reads IPFIX flow records stored by the lab flow collector. |
 | `k8s_mcp_server` | Kubernetes scenarios when `nika.k8s.access` permits MCP | `k8s_list_events` queries session-scoped Kubernetes events. |
 
 ### SDN (`kathara_sdn_mcp_server`)
@@ -45,6 +46,12 @@ Call `p4rt_exec` with `read` or `read --switch leaf_1`. Its response removes pri
 ### Telemetry (`kathara_telemetry_mcp_server`)
 
 Call `int_query_telemetry` with a start time and optional flow or packet filters. It reads observed INT-MX traces from the collector. The `p4_dc_gateway` scenario selects this server.
+
+### NetFlow (`kathara_netflow_mcp_server`)
+
+Call `netflow_query` with a time window, e.g. `start_time="-600"` for the last ten minutes. Narrow it with `exporter` (a router name) and an nfdump `filter` such as `proto udp and dst ip 10.254.0.6`. Set `aggregate_by` to sum packets, bytes, and flows per `router`, `inif`, `proto`, `srcip`, `srcport`, `dstip`, or `dstport`. Rows are ordered by `order_by` (`bytes`, `packets`, or `flows`) and capped by `limit` (at most 100).
+
+Routers export only ingress traffic, so a flow appears once for each router on its path. `in_if` is the kernel ifindex of the receiving interface; `ip -o link` on that router maps it to a name. Records become queryable about 20 seconds after the traffic. The `isp_abilene_netflow` scenario selects this server.
 
 ### Kubernetes (`k8s_mcp_server`)
 
