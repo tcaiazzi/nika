@@ -1,6 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 
-from nika.mcp.session_context import get_lab_name
+from nika.mcp.session_context import get_lab_name, get_session_meta
 from nika.service.kathara import KatharaNetflowAPI
 
 mcp = FastMCP("kathara_netflow_mcp_server")
@@ -34,7 +34,9 @@ def netflow_query(
         order_by: ``bytes``, ``packets``, or ``flows`` (descending).
         limit: Maximum rows (1-100).
     """
-    return KatharaNetflowAPI(lab_name=get_lab_name()).netflow_query(
+    return KatharaNetflowAPI(
+        lab_name=get_lab_name(), session_meta=get_session_meta()
+    ).netflow_query(
         start_time=start_time,
         end_time=end_time,
         exporter=exporter,
